@@ -1,39 +1,38 @@
 #!/usr/bin/python2
 
 import RPi.GPIO as GPIO
-import time, subprocess
+import time
+import subprocess
 
-def pressed():
-    global pressedAt
-    pressedAt = time.time()
+class Button(object):
+    def __init__(self, pin):
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(pin, GPIO.IN)
 
-def released():
-    global pressedAt
-    if (pressedAt and (time.time()-pressedAt > 3)):
-        subprocess.call(['poweroff'])
-        pressedAt = 0    # Not necessary, but doesn't hurt
-    else:
-        pressedAt = 0
+        self.pressedAt = 0
 
-def btnCB(channel):
-    time.sleep(.5)
-    if GPIO.input(channel):
-        released()
-    else:
-        pressed()
+        GPIO.add_event_detect(pin, GPIO.BOTH, callback=self.btnCB, bouncetime=300)
+
+    def pressed(self):
+        self.pressedAt = time.time()
+
+    def released(self):
+        if (self.pressedAt and (time.time()-self.pressedAt > 3)):
+            subprocess.call(['poweroff'])
+        self.pressedAt = 0
+
+    def btnCB(self, channel):
+        time.sleep(.5)
+        if GPIO.input(channel):
+            self.released()
+        else:
+            self.pressed()
 
 try:
-    GPIO.setwarnings(False) 
-    btnPin = 8
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(btnPin, GPIO.IN)
-
-    pressedAt = 0
-
-    GPIO.add_event_detect(btnPin, GPIO.BOTH, callback=btnCB, bouncetime=300)
+    button = Button(pin=8)
 
     while True:
         time.sleep(9999)
 except:
     GPIO.cleanup()
-
